@@ -1,0 +1,36 @@
+name: Convert Baseline to Word
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/convert_baselines_to_word.yaml"
+
+permissions: read-all
+
+jobs:
+  convert:
+    name: Convert
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Pandoc
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y pandoc
+      - name: Convert Markdown to DOCX
+        id: convert
+        run: |
+          pandoc PowerShell/ScubaGear/baselines/aad.md -o baselines/aad.docx
+          pandoc PowerShell/ScubaGear/baselines/defender.md -o baselines/defender.docx
+          pandoc PowerShell/ScubaGear/baselines/exo.md -o baselines/exo.docx
+          pandoc PowerShell/ScubaGear/baselines/powerbi.md -o baselines/powerbi.docx
+          pandoc PowerShell/ScubaGear/baselines/powerplatform.md -o baselines/powerplatform.docx
+          pandoc PowerShell/ScubaGear/baselines/sharepoint.md -o baselines/sharepoint.docx
+          pandoc PowerShell/ScubaGear/baselines/teams.md -o baselines/teams.docx
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: output
+          path: baselines
