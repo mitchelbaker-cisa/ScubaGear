@@ -39,7 +39,7 @@ tests contains {
 #--
 
 #
-# MS.TEAMS.1.2v1
+# MS.TEAMS.1.2v2
 #--
 
 # Iterate through all meeting policies. For each, check if AllowAnonymousUsersToStartMeeting
@@ -51,7 +51,7 @@ MeetingsAllowingAnonStart contains Policy.Identity if {
 
 # Pass if MeetingsAllowingAnonStart does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.1.2v1",
+    "PolicyId": "MS.TEAMS.1.2v2",
     "Criticality": "Shall",
     "Commandlet": ["Get-CsTeamsMeetingPolicy"],
     "ActualValue": Policies,
@@ -237,7 +237,7 @@ tests contains {
 # MS.TEAMS.1.7v2
 #--
 
-# Pass if BroadcastRecordingMode is set to UserOverride for global policy
+# Pass if BroadcastRecordingMode is set to UserOverride (Organizer can record) or AlwaysDisabled (Never record) for global policy
 tests contains {
     "PolicyId": "MS.TEAMS.1.7v2",
     "Criticality": "Should",
@@ -250,7 +250,11 @@ tests contains {
 
     # Filter: this control only applies to the Global policy
     Policy.Identity == "Global"
-    Status := Policy.BroadcastRecordingMode == "UserOverride"
+    # Check that recording is not set to "Always record" (AlwaysEnabled)
+    # The policy should pass when BroadcastRecordingMode is NOT "AlwaysEnabled"
+    # This includes "UserOverride" (Organizer can record), "AlwaysDisabled" (Never record), or any other value except "AlwaysEnabled"
+    # Handle potential null or undefined values by treating them as valid (not "AlwaysEnabled")
+    Status := Policy.BroadcastRecordingMode != "AlwaysEnabled"
 }
 
 # Edge case where pulling configuration from tenant fails
@@ -274,7 +278,7 @@ tests contains {
 ##############
 
 #
-# MS.TEAMS.2.1v1
+# MS.TEAMS.2.1v2
 #--
 
 # Iterate through all meeting policies. For each, check if AllowFederatedUsers
@@ -289,7 +293,7 @@ ExternalAccessConfig contains Policy.Identity if {
 
 # Pass if ExternalAccessConfig does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.2.1v1",
+    "PolicyId": "MS.TEAMS.2.1v2",
     "Criticality": "Shall",
     "Commandlet": ["Get-CsTenantFederationConfiguration"],
     "ActualValue": Policies,
@@ -303,7 +307,7 @@ tests contains {
 #--
 
 #
-# MS.TEAMS.2.2v1
+# MS.TEAMS.2.2v2
 #--
 
 # There are two relevant settings:
@@ -332,7 +336,7 @@ FederationConfiguration contains Policy.Identity if {
 
 # Pass if FederationConfiguration does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.2.2v1",
+    "PolicyId": "MS.TEAMS.2.2v2",
     "Criticality": "Shall",
     "Commandlet": ["Get-CsTenantFederationConfiguration"],
     "ActualValue": Policies,
@@ -346,7 +350,7 @@ tests contains {
 #--
 
 #
-# MS.TEAMS.2.3v1
+# MS.TEAMS.2.3v2
 #--
 
 # Iterate through all meeting policies. For each, check if AllowTeamsConsumer
@@ -358,7 +362,7 @@ InternalCannotEnable contains Policy.Identity if {
 
 # Pass if InternalCannotEnable does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.2.3v1",
+    "PolicyId": "MS.TEAMS.2.3v2",
     "Criticality": "Should",
     "Commandlet": ["Get-CsTenantFederationConfiguration"],
     "ActualValue": Policies,
@@ -370,38 +374,6 @@ tests contains {
     Status := count(Policies) == 0
 }
 #--
-
-
-##############
-# MS.TEAMS.3 #
-##############
-
-#
-# MS.TEAMS.3.1v1
-#--
-
-# Iterate through all meeting policies. For each, check if AllowPublicUsers
-# is true. If so, save the policy Identity to the SkypeBlocConfig list.
-SkypeBlocConfig contains Policy.Identity if {
-    some Policy in input.federation_configuration
-    Policy.AllowPublicUsers == true
-}
-
-# Pass if SkypeBlocConfig does not have any policies saved.
-tests contains {
-    "PolicyId": "MS.TEAMS.3.1v1",
-    "Criticality": "Shall",
-    "Commandlet": ["Get-CsTenantFederationConfiguration"],
-    "ActualValue": Policies,
-    "ReportDetails": ReportDetailsArray(Status, Policies, String),
-    "RequirementMet": Status
-} if {
-    Policies := SkypeBlocConfig
-    String := "domains that allows contact with Skype users:"
-    Status := count(Policies) == 0
-}
-#--
-
 
 ##############
 # MS.TEAMS.4 #
@@ -484,7 +456,7 @@ tests contains {
 ##############
 
 #
-# MS.TEAMS.5.1v1
+# MS.TEAMS.5.1v2
 #--
 
 # Iterate through all meeting policies. For each, check if DefaultCatalogAppsType
@@ -496,7 +468,7 @@ PoliciesBlockingDefaultApps contains Policy.Identity if {
 
 # Pass if PoliciesBlockingDefaultApps does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.5.1v1",
+    "PolicyId": "MS.TEAMS.5.1v2",
     "Criticality": "Should",
     "Commandlet": ["Get-CsTeamsAppPermissionPolicy"],
     "ActualValue": Policies,
@@ -510,7 +482,7 @@ tests contains {
 #--
 
 #
-# MS.TEAMS.5.2v1
+# MS.TEAMS.5.2v2
 #--
 
 # Iterate through all meeting policies. For each, check if GlobalCatalogAppsType
@@ -522,7 +494,7 @@ PoliciesAllowingGlobalApps contains Policy.Identity if {
 
 # Pass if PoliciesAllowingGlobalApps does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.5.2v1",
+    "PolicyId": "MS.TEAMS.5.2v2",
     "Criticality": "Should",
     "Commandlet": ["Get-CsTeamsAppPermissionPolicy"],
     "ActualValue": Policies,
@@ -536,7 +508,7 @@ tests contains {
 #--
 
 #
-# MS.TEAMS.5.3v1
+# MS.TEAMS.5.3v2
 #--
 #
 
@@ -549,7 +521,7 @@ PoliciesAllowingCustomApps contains Policy.Identity if {
 
 # Pass if PoliciesAllowingCustomApps does not have any policies saved.
 tests contains {
-    "PolicyId": "MS.TEAMS.5.3v1",
+    "PolicyId": "MS.TEAMS.5.3v2",
     "Criticality": "Should",
     "Commandlet": ["Get-CsTeamsAppPermissionPolicy"],
     "ActualValue": Policies,

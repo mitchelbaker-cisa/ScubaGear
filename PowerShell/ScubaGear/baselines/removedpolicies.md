@@ -40,7 +40,7 @@ Group owners SHALL NOT be allowed to consent to applications.
 #### MS.DEFENDER.6.2v1
 Microsoft Purview Audit (Premium) logging SHALL be enabled for ALL users.
 - _Removal date:_ March 2025
-- _Removal rationale:_ MS.DEFENDER.6.2v1 was originally included in order to enable auditing of additional user actions not captured under Purview Audit (Standard). In October 2023, Microsoft announced changes to its Purview Audit service that included making audit events in Purview Audit (Premium) available to Purview Audit (Standard) subscribers. Now that the rollout of changes has been completed, Purview (Standard) includes the necessary auditing which is addressed by MS.DEFENDER.6.1v1.
+- _Removal rationale:_ MS.DEFENDER.6.2v1 was originally included in order to enable auditing of additional user actions not captured under Purview Audit (Standard). In October 2023, Microsoft announced changes to its Purview Audit service that included making audit events in Purview Audit (Premium) available to Purview Audit (Standard) subscribers. Now that the rollout of changes is completed, Purview (Standard) includes the necessary auditing that is addressed by MS.DEFENDER.6.1v1.
 
 ## Exchange Online
 
@@ -74,7 +74,7 @@ N/A
 #### MS.SHAREPOINT.1.4v1
 Guest access SHALL be limited to the email the invitation was sent to.
 - _Removal date:_ February 2025
-- _Removal rationale:_ The option to limit guest access to the email the invitation was sent to found in policy MS.SHAREPOINT.1.4v1 has been deprecated by Microsoft. All references including the policy and its implementation steps have been removed as the setting is no longer present.
+- _Removal rationale:_ The option to limit guest access to the email the invitation was sent to found in policy MS.SHAREPOINT.1.4v1 has been deprecated by Microsoft. All references, including the policy and its implementation steps, have been removed since the setting is no longer present.
 
 #### MS.SHAREPOINT.4.1v1
 Users SHALL be prevented from running custom scripts on personal sites (aka OneDrive).
@@ -85,5 +85,16 @@ Users SHALL be prevented from running custom scripts on personal sites (aka OneD
 Users SHALL be prevented from running custom scripts on self-service created sites.
 - _Removal date:_ November 2024
 - _Removal rationale:_ Microsoft has noted that after November 2024 it will no longer be possible to prevent SharePoint in resetting custom script settings to its original value (disabled) for all sites. All references including the policy, implementation steps, and section, by direction of CISA and Microsoft, have been removed as the setting will be automatically reverted back to **Blocked** within 24 hours.
+
+## Microsoft Teams
+
+### Removed Policies
+
+#### MS.TEAMS.3.1v1
+
+Contact with Skype users SHALL be blocked.
+- _Removal date:_ August 2025
+- _Removal rationale:_ The option to restrict contact with Skype users found in policy MS.TEAMS.3.1v1 has been deprecated by Microsoft. All references, including the policy and its implementation steps, have been removed since the setting is no longer present.
+  
 
 **`TLP:CLEAR`**

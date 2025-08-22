@@ -1,6 +1,8 @@
 $ModulesPath = "../../../../../../Modules"
 $AADRiskyPermissionsHelper = "$($ModulesPath)/Providers/ProviderHelpers/AADRiskyPermissionsHelper.psm1"
+$PermissionsModule = "$($ModulesPath)/Permissions/PermissionsHelper.psm1"
 Import-Module (Join-Path -Path $PSScriptRoot -ChildPath $AADRiskyPermissionsHelper)
+Import-Module (Join-Path -Path $PSScriptRoot -ChildPath $PermissionsModule)
 
 InModuleScope AADRiskyPermissionsHelper {
     Describe "Format-RiskyApplications" {
@@ -10,14 +12,31 @@ InModuleScope AADRiskyPermissionsHelper {
             $MockFederatedCredentials = Get-Content (Join-Path -Path $PSScriptRoot -ChildPath "../RiskyPermissionsSnippets/MockFederatedCredentials.json") | ConvertFrom-Json
             $MockServicePrincipals = Get-Content (Join-Path -Path $PSScriptRoot -ChildPath "../RiskyPermissionsSnippets/MockServicePrincipals.json") | ConvertFrom-Json
             $MockServicePrincipalAppRoleAssignments = Get-Content (Join-Path -Path $PSScriptRoot -ChildPath "../RiskyPermissionsSnippets/MockServicePrincipalAppRoleAssignments.json") | ConvertFrom-Json
+            $MockResourcePermissionCacheJson = Get-Content (Join-Path -Path $PSScriptRoot -ChildPath "../RiskyPermissionsSnippets/MockResourcePermissionCache.json") | ConvertFrom-Json
+            $MockResourcePermissionCache = @{}
+            foreach ($prop in $MockResourcePermissionCacheJson.PSObject.Properties) {
+                $MockResourcePermissionCache[$prop.Name] = $prop.Value
+            }
 
-            function Get-MgBetaApplication { $MockApplications }
-            function Get-MgBetaApplicationFederatedIdentityCredential { $MockFederatedCredentials }
-            function Get-MgBetaServicePrincipal { $MockServicePrincipals }
+            Mock Invoke-GraphDirectly {
+                return @{
+                    "value" = $MockApplications
+                    "@odata.context" = "https://graph.microsoft.com/beta/$metadata#applications"
+                }
+            } -ParameterFilter { $commandlet -eq "Get-MgBetaApplication" -or $Uri -match "/applications" } -ModuleName AADRiskyPermissionsHelper
+              Mock Invoke-GraphDirectly {
+                return @{
+                    "value" = $MockFederatedCredentials
+                    "@odata.context" = "https://graph.microsoft.com/beta/$metadata#applications/$ID/federatedIdentityCredentials"
+                }
+            } -ParameterFilter { $commandlet -eq "Get-MgBetaApplicationFederatedIdentityCredential" -or $Uri -match "/federatedIdentityCredentials" } -ModuleName AADRiskyPermissionsHelper
+                Mock Invoke-GraphDirectly {
+                return @{
+                    "value" = $MockServicePrincipals
+                    "@odata.context" = "https://graph.microsoft.com/beta/$metadata#servicePrincipals"
+                }
+            } -ParameterFilter { $commandlet -eq "Get-MgBetaServicePrincipal" -or $Uri -match "/serviceprincipals" } -ModuleName AADRiskyPermissionsHelper
 
-            Mock Get-MgBetaApplication { $MockApplications }
-            Mock Get-MgBetaApplicationFederatedIdentityCredential { $MockFederatedCredentials }
-            Mock Get-MgBetaServicePrincipal { $MockServicePrincipals }
             Mock Invoke-MgGraphRequest {
                 return @{
                     responses = @(
@@ -39,8 +58,12 @@ InModuleScope AADRiskyPermissionsHelper {
                 }
             }
 
-            $RiskyApps = Get-ApplicationsWithRiskyPermissions
-            $RiskySPs = Get-ServicePrincipalsWithRiskyPermissions
+            Mock Invoke-GraphDirectly {
+                return $MockResourcePermissionCache
+            }
+
+            $RiskyApps = Get-ApplicationsWithRiskyPermissions -M365Environment "gcc" -ResourcePermissionCache $MockResourcePermissionCache
+            $RiskySPs = Get-ServicePrincipalsWithRiskyPermissions -M365Environment "gcc" -ResourcePermissionCache $MockResourcePermissionCache
             [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSReviewUnusedParameter', 'AggregateRiskyApps')]
             $AggregateRiskyApps = Format-RiskyApplications -RiskyApps $RiskyApps -RiskySPs $RiskySPs
         }
@@ -56,7 +79,7 @@ InModuleScope AADRiskyPermissionsHelper {
             $AggregateRiskyApps[0].KeyCredentials | Should -HaveCount 3
             $AggregateRiskyApps[0].PasswordCredentials | Should -HaveCount 2
             $AggregateRiskyApps[0].FederatedCredentials | Should -HaveCount 2
-            $AggregateRiskyApps[0].RiskyPermissions | Should -HaveCount 2
+            $AggregateRiskyApps[0].Permissions | Should -HaveCount 2
 
             $AggregateRiskyApps[1].DisplayName | Should -Match "Test App 2"
             $AggregateRiskyApps[1].ObjectId.Application | Should -Match "00000000-0000-0000-0000-000000000002"
@@ -66,7 +89,7 @@ InModuleScope AADRiskyPermissionsHelper {
             $AggregateRiskyApps[1].KeyCredentials | Should -HaveCount 2
             $AggregateRiskyApps[1].PasswordCredentials | Should -BeNullOrEmpty
             $AggregateRiskyApps[1].FederatedCredentials | Should -HaveCount 2
-            $AggregateRiskyApps[1].RiskyPermissions | Should -HaveCount 3
+            $AggregateRiskyApps[1].Permissions | Should -HaveCount 3
 
             # Application with no matching service principal results in slightly different format
             $AggregateRiskyApps[2].DisplayName | Should -Match "Test App 3"
@@ -76,7 +99,7 @@ InModuleScope AADRiskyPermissionsHelper {
             $AggregateRiskyApps[2].KeyCredentials | Should -BeNullOrEmpty
             $AggregateRiskyApps[2].PasswordCredentials | Should -HaveCount 1
             $AggregateRiskyApps[2].FederatedCredentials | Should -HaveCount 2
-            $AggregateRiskyApps[2].RiskyPermissions | Should -HaveCount 4
+            $AggregateRiskyApps[2].Permissions | Should -HaveCount 4
         }
 
         It "matches service principals with applications that have the same AppId" {
@@ -111,7 +134,7 @@ InModuleScope AADRiskyPermissionsHelper {
             # KeyCredentials/PasswordCredentials/FederatedCredentials are merged into one list
             $ExpectedKeys = @(
                 "ObjectId", "AppId", "DisplayName", "IsMultiTenantEnabled", `
-                "KeyCredentials", "PasswordCredentials", "FederatedCredentials", "RiskyPermissions"
+                "KeyCredentials", "PasswordCredentials", "FederatedCredentials", "Permissions"
             )
             foreach ($App in $AggregateRiskyApps) {
                 # Check for correct properties
@@ -129,6 +152,22 @@ InModuleScope AADRiskyPermissionsHelper {
                 }
             }
             $AppsWithNoMatch | Should -Be 1
+        }
+
+        It "throws a ParameterBindingValidationException if the -RiskyApps value is null" {
+            { Format-RiskyApplications -RiskyApps $null -RiskySPs @( @{} ) | Should -Throw -ErrorType System.Management.Automation.ParameterBindingValidationException }
+        }
+
+        It "throws a ParameterBindingValidationException if the -RiskyApps value is empty" {
+            { Format-RiskyApplications -RiskyApps @() -RiskySPs @( @{} ) | Should -Throw -ErrorType System.Management.Automation.ParameterBindingValidationException }
+        }
+
+        It "throws a ParameterBindingValidationException if the -RiskySPs value is null" {
+            { Format-RiskyApplications -RiskyApps @( @{} ) -RiskySPs $null | Should -Throw -ErrorType System.Management.Automation.ParameterBindingValidationException }
+        }
+
+        It "throws a ParameterBindingValidationException if the -RiskySPs value is empty" {
+            { Format-RiskyApplications -RiskyApps @( @{} ) -RiskySPs @() | Should -Throw -ErrorType System.Management.Automation.ParameterBindingValidationException }
         }
     }
 }
