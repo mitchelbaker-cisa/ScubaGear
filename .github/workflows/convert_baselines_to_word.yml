@@ -29,6 +29,7 @@ jobs:
           pandoc PowerShell/ScubaGear/baselines/powerplatform.md -o baselines/powerplatform.docx
           pandoc PowerShell/ScubaGear/baselines/sharepoint.md -o baselines/sharepoint.docx
           pandoc PowerShell/ScubaGear/baselines/teams.md -o baselines/teams.docx
+          pandoc PowerShell/ScubaGear/baselines/removedpolicies.md -o baselines/removedpolicies.docx
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
